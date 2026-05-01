@@ -1,21 +1,28 @@
 :root {
-  --bg: #f5f5f1;
+  --bg: #f9f9f9;
   --panel: #ffffff;
-  --ink: #161616;
-  --muted: #696969;
-  --line: #deded8;
-  --accent: #111111;
-  --soft: #efefeb;
+  --ink: #231f20;
+  --muted: #808080;
+  --line: #cccccc;
+  --accent: #58c066;
+  --accent-bright: #66d773;
+  --accent-deep: #136b0e;
+  --soft: #f1f4f1;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top left, #ffffff 0, var(--bg) 38%, #e8e8e1 100%);
+  background:
+    radial-gradient(circle at top left, rgba(102, 215, 115, 0.18) 0, transparent 34%),
+    linear-gradient(135deg, #ffffff 0%, var(--bg) 48%, #eef6ef 100%);
+  border-top: 6px solid var(--accent);
 }
 
 .shell {
@@ -24,22 +31,35 @@ body {
   padding: 48px 0;
 }
 
-.hero { margin-bottom: 22px; }
+.hero {
+  margin-bottom: 22px;
+}
 
 .eyebrow {
   margin: 0 0 8px;
-  color: var(--muted);
-  letter-spacing: .12em;
+  color: var(--accent-deep);
+  letter-spacing: .14em;
   text-transform: uppercase;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 h1 {
   margin: 0;
+  color: var(--ink);
   font-size: clamp(34px, 5vw, 58px);
   line-height: 1;
   letter-spacing: -.04em;
+}
+
+h1::after {
+  content: "";
+  display: block;
+  width: 96px;
+  height: 6px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
 }
 
 .lede {
@@ -51,10 +71,11 @@ h1 {
 }
 
 .panel {
-  background: rgba(255,255,255,.88);
+  background: rgba(255, 255, 255, .92);
   border: 1px solid var(--line);
+  border-top: 5px solid var(--accent);
   border-radius: 28px;
-  box-shadow: 0 24px 70px rgba(0,0,0,.08);
+  box-shadow: 0 24px 70px rgba(19, 107, 14, .10);
   padding: clamp(20px, 4vw, 34px);
 }
 
@@ -63,22 +84,28 @@ h1 {
   gap: 16px;
 }
 
-.two { grid-template-columns: minmax(0, 1.5fr) minmax(160px, .5fr); }
-.three { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; }
+.two {
+  grid-template-columns: minmax(0, 1.5fr) minmax(160px, .5fr);
+}
+
+.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+}
 
 label {
   display: grid;
   gap: 8px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
-  color: #303030;
+  color: var(--accent-deep);
 }
 
 input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: #fff;
+  background: #ffffff;
   padding: 14px 15px;
   font: inherit;
   font-size: 15px;
@@ -86,8 +113,8 @@ input {
 }
 
 input:focus {
-  border-color: #111;
-  box-shadow: 0 0 0 4px rgba(0,0,0,.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(88, 192, 102, .20);
 }
 
 .supplier-card,
@@ -101,18 +128,18 @@ input:focus {
 .supplier-card div,
 .result-card div {
   min-height: 92px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(88, 192, 102, .28);
   border-radius: 20px;
-  background: var(--soft);
+  background: linear-gradient(135deg, #ffffff 0%, #f2faf3 100%);
   padding: 15px;
 }
 
 .supplier-card span,
 .result-card span {
   display: block;
-  color: var(--muted);
+  color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .08em;
   margin-bottom: 8px;
@@ -121,6 +148,7 @@ input:focus {
 .supplier-card strong,
 .result-card strong {
   display: block;
+  color: var(--ink);
   font-size: 15px;
   line-height: 1.35;
   word-break: break-word;
@@ -136,21 +164,37 @@ input:focus {
 button {
   border: 0;
   border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: #ffffff;
   padding: 14px 22px;
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 12px 28px rgba(19, 107, 14, .22);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
 }
 
 button.secondary {
-  color: var(--ink);
-  background: #ecece7;
+  color: var(--accent-deep);
+  background: #e8f6ea;
+  box-shadow: none;
 }
 
-button:hover { transform: translateY(-1px); }
-button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+button:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, var(--accent-bright), var(--accent));
+  box-shadow: 0 16px 34px rgba(19, 107, 14, .28);
+}
+
+button.secondary:hover {
+  background: #dff3e2;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+}
 
 .note {
   margin: 18px 0 0;
@@ -166,67 +210,4 @@ button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
   .result-card {
     grid-template-columns: 1fr;
   }
-}
-:root {
-  --pixelens-green: #58c066;
-  --pixelens-bright-green: #66d773;
-  --pixelens-deep-green: #136b0e;
-  --pixelens-dark: #231f20;
-  --pixelens-light: #f9f9f9;
-}
-
-body {
-  border-top: 5px solid var(--pixelens-green);
-}
-
-.eyebrow,
-.kicker,
-label,
-.card-label,
-.result-label {
-  color: var(--pixelens-deep-green) !important;
-}
-
-input:focus,
-select:focus {
-  border-color: var(--pixelens-green) !important;
-  box-shadow: 0 0 0 4px rgba(88, 192, 102, 0.18) !important;
-  outline: none !important;
-}
-
-button,
-.primary-button,
-.download-button,
-#downloadBtn {
-  background: linear-gradient(135deg, var(--pixelens-green), var(--pixelens-deep-green)) !important;
-  color: #ffffff !important;
-  border: none !important;
-}
-
-button:hover,
-.primary-button:hover,
-.download-button:hover,
-#downloadBtn:hover {
-  background: linear-gradient(135deg, var(--pixelens-bright-green), var(--pixelens-green)) !important;
-}
-
-.panel,
-.form-card,
-.app-card,
-.card {
-  border-top: 4px solid var(--pixelens-green) !important;
-}
-
-h1 {
-  color: var(--pixelens-dark);
-}
-
-h1::after {
-  content: "";
-  display: block;
-  width: 96px;
-  height: 6px;
-  margin-top: 18px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--pixelens-green), var(--pixelens-bright-green));
 }
