@@ -1,5 +1,5 @@
 const SUPPLIERS_JSON = "./suppliers.json";
-const TEMPLATE_PDF = "./2307_template_blank.pdf";
+const TEMPLATE_PDF = "./2307_Jan_2018_ENCS_v3_original.pdf";
 
 const PAYOR = {
   tin: "619-447-904-00000",
@@ -236,7 +236,7 @@ async function generatePdf() {
     templateBytes = await response.arrayBuffer();
   } catch (error) {
     console.error(error);
-    alert("Cannot load 2307_template_blank.pdf. Make sure the uploaded BIR PDF template is in the repository root.");
+    alert("Cannot load 2307_Jan_2018_ENCS_v3_original.pdf. Make sure the uploaded BIR PDF template is in the repository root.");
     return;
   }
   const pdfDoc = await PDFDocument.load(templateBytes);
