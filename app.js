@@ -1,320 +1,660 @@
-const TEMPLATE_PDF = "./2307_template_blank.pdf";
 const SUPPLIERS_JSON = "./suppliers.json";
+const TEMPLATE_PDF = "./2307_template_blank.pdf";
 
-const state = {
-  suppliers: [],
-  selectedSupplier: null,
-};
+let suppliers = [];
+let selectedSupplier = null;
+let currentPreview = null;
 
-const el = {
-  supplierInput: document.getElementById("supplierInput"),
-  supplierList: document.getElementById("supplierList"),
-  yearInput: document.getElementById("yearInput"),
-  monthInput: document.getElementById("monthInput"),
-  amountInput: document.getElementById("amountInput"),
-  zipInput: document.getElementById("zipInput"),
-  previewName: document.getElementById("previewName"),
-  previewTin: document.getElementById("previewTin"),
-  previewAddress: document.getElementById("previewAddress"),
-  quarterPreview: document.getElementById("quarterPreview"),
-  monthBoxPreview: document.getElementById("monthBoxPreview"),
-  taxPreview: document.getElementById("taxPreview"),
-  statusText: document.getElementById("statusText"),
-  downloadPdfBtn: document.getElementById("downloadPdfBtn"),
-  resetBtn: document.getElementById("resetBtn"),
-};
-
-const MONTHS = [
-  ["january", "jan", "1"],
-  ["february", "feb", "2"],
-  ["march", "mar", "3"],
-  ["april", "apr", "4"],
-  ["may", "5"],
-  ["june", "jun", "6"],
-  ["july", "jul", "7"],
-  ["august", "aug", "8"],
-  ["september", "sep", "sept", "9"],
-  ["october", "oct", "10"],
-  ["november", "nov", "11"],
-  ["december", "dec", "12"],
-];
-
-function normalizeText(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function parseAmount(value) {
-  const cleaned = String(value || "").replace(/,/g, "").trim();
-  const number = Number(cleaned);
-  return Number.isFinite(number) ? number : null;
-}
-
-function money(value) {
-  return Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function parseMonth(value) {
-  const needle = normalizeText(value);
-  if (!needle) return null;
-  for (let i = 0; i < MONTHS.length; i++) {
-    if (MONTHS[i].includes(needle)) return i + 1;
+function pickElement(ids, selector) {
+  for (const id of ids) {
+    const element = document.getElementById(id);
+    if (element) return element;
   }
+
+  if (selector) {
+    const element = document.querySelector(selector);
+    if (element) return element;
+  }
+
   return null;
 }
 
-function pad2(value) {
-  return String(value).padStart(2, "0");
+function findInputByPlaceholder(words) {
+  const inputs = Array.from(document.querySelectorAll("input"));
+  return inputs.find((input) => {
+    const placeholder = String(input.placeholder || "").toLowerCase();
+    const id = String(input.id || "").toLowerCase();
+    const name = String(input.name || "").toLowerCase();
+    const combined = `${placeholder} ${id} ${name}`;
+    return words.some((word) => combined.includes(word));
+  }) || null;
 }
 
-function formatDateParts(month, day, year) {
-  return `${pad2(month)} ${pad2(day)} ${year}`;
+const supplierInput =
+  pickElement(
+    ["supplierName", "supplierInput", "supplier", "supplier-name", "payeeName", "payee"],
+    'input[placeholder*="supplier" i]'
+  ) || findInputByPlaceholder(["supplier", "payee", "name"]);
+
+const yearInput =
+  pickElement(
+    ["year", "taxYear", "yearInput"],
+    'input[placeholder*="year" i]'
+  ) || findInputByPlaceholder(["year"]);
+
+const monthInput =
+  pickElement(
+    ["month", "monthInput", "taxMonth"],
+    'input[placeholder*="month" i]'
+  ) || findInputByPlaceholder(["month", "march", "jun"]);
+
+const amountInput =
+  pickElement(
+    ["amount", "grossAmount", "gross", "amountInput"],
+    'input[placeholder*="150000" i]'
+  ) || findInputByPlaceholder(["amount", "gross", "150000"]);
+
+const zipInput =
+  pickElement(
+    ["zip", "zipCode", "zipInput"],
+    'input[placeholder*="unknown" i]'
+  ) || findInputByPlaceholder(["zip", "unknown"]);
+
+const downloadButton =
+  pickElement(
+    ["downloadBtn", "downloadButton", "generatePdf", "downloadPdf"],
+    null
+  ) || Array.from(document.querySelectorAll("button")).find((button) =>
+    String(button.textContent || "").toLowerCase().includes("download")
+  );
+
+const resetButton =
+  pickElement(
+    ["resetBtn", "resetButton"],
+    null
+  ) || Array.from(document.querySelectorAll("button")).find((button) =>
+    String(button.textContent || "").toLowerCase().includes("reset")
+  );
+
+function getSupplierName(supplier) {
+  return String(
+    supplier.name ||
+    supplier["Supplier Name"] ||
+    supplier["supplier name"] ||
+    supplier.supplierName ||
+    supplier.Name ||
+    supplier.NAME ||
+    supplier.payee ||
+    supplier.Payee ||
+    ""
+  ).trim();
 }
 
-function quarterInfo(month, year) {
-  const q = Math.ceil(month / 3);
-  const startMonth = (q - 1) * 3 + 1;
-  const endMonth = startMonth + 2;
-  const endDay = new Date(year, endMonth, 0).getDate();
-  const monthPosition = ((month - 1) % 3) + 1;
-  const labels = { 1: "1st Month of the Quarter", 2: "2nd Month of the Quarter", 3: "3rd Month of the Quarter" };
+function getSupplierTin(supplier) {
+  return String(
+    supplier.tin ||
+    supplier.TIN ||
+    supplier.Tin ||
+    supplier["tin"] ||
+    supplier["Tax Identification Number"] ||
+    supplier["tax identification number"] ||
+    ""
+  ).trim();
+}
+
+function getSupplierAddress(supplier) {
+  return String(
+    supplier.address ||
+    supplier.Address ||
+    supplier.ADDRESS ||
+    supplier["Supplier Address"] ||
+    supplier["supplier address"] ||
+    ""
+  ).trim();
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/ñ/g, "n")
+    .replace(/,/g, " ")
+    .replace(/\./g, " ")
+    .replace(/\-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeAmount(value) {
+  const number = Number(String(value || "").replace(/[^\d.]/g, ""));
+  return Number.isFinite(number) ? number : 0;
+}
+
+function money(value) {
+  const number = Number(value || 0);
+  return number.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function compactMoney(value) {
+  const number = Number(value || 0);
+  return number.toFixed(2);
+}
+
+async function loadSuppliers() {
+  const possiblePaths = [
+    SUPPLIERS_JSON,
+    "./suppliers.json",
+    "suppliers.json",
+    "./data/suppliers.json",
+    "data/suppliers.json"
+  ];
+
+  for (const path of possiblePaths) {
+    try {
+      const response = await fetch(path, { cache: "no-store" });
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const rawList = Array.isArray(data) ? data : Object.values(data);
+
+      suppliers = rawList
+        .map((item) => ({
+          name: getSupplierName(item),
+          tin: getSupplierTin(item),
+          address: getSupplierAddress(item),
+          raw: item
+        }))
+        .filter((item) => item.name);
+
+      console.log("Supplier database loaded from:", path);
+      console.log("Supplier count:", suppliers.length);
+      return;
+    } catch (error) {
+      console.warn("Failed loading supplier path:", path, error);
+    }
+  }
+
+  suppliers = [];
+  console.error("No supplier database found.");
+}
+
+function findSupplier(query) {
+  const cleanQuery = normalizeText(query);
+  if (!cleanQuery) return null;
+
+  const queryParts = cleanQuery.split(" ").filter(Boolean);
+
+  const exactOrIncluded = suppliers.find((supplier) => {
+    const cleanName = normalizeText(supplier.name);
+    return cleanName.includes(cleanQuery);
+  });
+
+  if (exactOrIncluded) return exactOrIncluded;
+
+  const allPartsMatch = suppliers.find((supplier) => {
+    const cleanName = normalizeText(supplier.name);
+    return queryParts.every((part) => cleanName.includes(part));
+  });
+
+  if (allPartsMatch) return allPartsMatch;
+
+  return null;
+}
+
+function getMonthNumber(input) {
+  const value = normalizeText(input);
+
+  const monthMap = {
+    january: 1,
+    jan: 1,
+    "1": 1,
+    "01": 1,
+
+    february: 2,
+    feb: 2,
+    "2": 2,
+    "02": 2,
+
+    march: 3,
+    mar: 3,
+    "3": 3,
+    "03": 3,
+
+    april: 4,
+    apr: 4,
+    "4": 4,
+    "04": 4,
+
+    may: 5,
+    "5": 5,
+    "05": 5,
+
+    june: 6,
+    jun: 6,
+    "6": 6,
+    "06": 6,
+
+    july: 7,
+    jul: 7,
+    "7": 7,
+    "07": 7,
+
+    august: 8,
+    aug: 8,
+    "8": 8,
+    "08": 8,
+
+    september: 9,
+    sept: 9,
+    sep: 9,
+    "9": 9,
+    "09": 9,
+
+    october: 10,
+    oct: 10,
+
+    november: 11,
+    nov: 11,
+
+    december: 12,
+    dec: 12
+  };
+
+  return monthMap[value] || null;
+}
+
+function getQuarterInfo(monthNumber, year) {
+  const safeYear = Number(year) || new Date().getFullYear();
+
+  const quarters = [
+    {
+      startMonth: 1,
+      endMonth: 3,
+      startDay: 1,
+      endDay: 31,
+      label: "First quarter",
+      months: [1, 2, 3]
+    },
+    {
+      startMonth: 4,
+      endMonth: 6,
+      startDay: 1,
+      endDay: 30,
+      label: "Second quarter",
+      months: [4, 5, 6]
+    },
+    {
+      startMonth: 7,
+      endMonth: 9,
+      startDay: 1,
+      endDay: 30,
+      label: "Third quarter",
+      months: [7, 8, 9]
+    },
+    {
+      startMonth: 10,
+      endMonth: 12,
+      startDay: 1,
+      endDay: 31,
+      label: "Fourth quarter",
+      months: [10, 11, 12]
+    }
+  ];
+
+  const quarter = quarters.find((item) => item.months.includes(monthNumber));
+  if (!quarter) return null;
+
+  const monthPosition = quarter.months.indexOf(monthNumber) + 1;
+
   return {
-    q,
-    startMonth,
-    endMonth,
-    endDay,
-    from: formatDateParts(startMonth, 1, year),
-    to: formatDateParts(endMonth, endDay, year),
+    year: safeYear,
+    startMonth: quarter.startMonth,
+    endMonth: quarter.endMonth,
+    startDay: quarter.startDay,
+    endDay: quarter.endDay,
     monthPosition,
-    monthLabel: labels[monthPosition],
+    label: quarter.label,
+    periodText: `${String(quarter.startMonth).padStart(2, "0")} ${String(quarter.startDay).padStart(2, "0")} ${safeYear} to ${String(quarter.endMonth).padStart(2, "0")} ${String(quarter.endDay).padStart(2, "0")} ${safeYear}`,
+    fromDate: `${String(quarter.startMonth).padStart(2, "0")} ${String(quarter.startDay).padStart(2, "0")} ${safeYear}`,
+    toDate: `${String(quarter.endMonth).padStart(2, "0")} ${String(quarter.endDay).padStart(2, "0")} ${safeYear}`,
+    monthBox: monthPosition === 1 ? "First month of quarter" : monthPosition === 2 ? "Second month of quarter" : "Third month of quarter"
   };
 }
 
-function findSupplier(value) {
-  const needle = normalizeText(value);
-  if (!needle) return null;
-  return state.suppliers.find(s => normalizeText(s.name) === needle)
-    || state.suppliers.find(s => normalizeText(s.tab) === needle)
-    || state.suppliers.find(s => normalizeText(s.name).includes(needle))
-    || state.suppliers.find(s => normalizeText(s.tab).includes(needle));
+function findCardByLabel(labelWords) {
+  const cards = Array.from(document.querySelectorAll(".supplier-card div, .result-card div, .card, .info-card, .summary-card"));
+  return cards.find((card) => {
+    const text = normalizeText(card.textContent);
+    return labelWords.every((word) => text.includes(normalizeText(word)));
+  }) || null;
 }
 
-function setStatus(message) {
-  el.statusText.textContent = message;
+function setCardValue(labelWords, value) {
+  const card = findCardByLabel(labelWords);
+  if (!card) return false;
+
+  const strong = card.querySelector("strong");
+  if (strong) {
+    strong.textContent = value;
+    return true;
+  }
+
+  const spans = Array.from(card.querySelectorAll("span"));
+  if (spans.length) {
+    const lastSpan = spans[spans.length - 1];
+    lastSpan.textContent = value;
+    return true;
+  }
+
+  card.textContent = value;
+  return true;
+}
+
+function setElementText(ids, labelWords, value) {
+  const element = pickElement(ids, null);
+  if (element) {
+    element.textContent = value;
+    return;
+  }
+
+  setCardValue(labelWords, value);
 }
 
 function updateSupplierPreview() {
-  const supplier = findSupplier(el.supplierInput.value);
-  state.selectedSupplier = supplier;
-  el.previewName.textContent = supplier ? supplier.name : "No supplier selected";
-  el.previewTin.textContent = supplier ? supplier.tin : "Pending";
-  el.previewAddress.textContent = supplier ? supplier.address : "Pending";
-}
+  const query = supplierInput ? supplierInput.value : "";
+  selectedSupplier = findSupplier(query);
 
-function updateComputedPreview() {
-  const month = parseMonth(el.monthInput.value);
-  const year = Number(el.yearInput.value) || 2026;
-  const amount = parseAmount(el.amountInput.value);
-
-  if (month) {
-    const q = quarterInfo(month, year);
-    el.quarterPreview.textContent = `${q.from} to ${q.to}`;
-    el.monthBoxPreview.textContent = q.monthLabel;
-  } else {
-    el.quarterPreview.textContent = "Pending";
-    el.monthBoxPreview.textContent = "Pending";
+  if (!selectedSupplier) {
+    setElementText(
+      ["selectedSupplierName", "supplierNameOutput", "nameOutput", "payeeNameOutput"],
+      ["name"],
+      "No supplier selected"
+    );
+    setElementText(
+      ["selectedSupplierTin", "tinOutput", "payeeTinOutput"],
+      ["tin"],
+      "Pending"
+    );
+    setElementText(
+      ["selectedSupplierAddress", "addressOutput", "payeeAddressOutput"],
+      ["address"],
+      "Pending"
+    );
+    return;
   }
 
-  if (amount !== null) {
-    el.taxPreview.textContent = money(amount * 0.02);
+  setElementText(
+    ["selectedSupplierName", "supplierNameOutput", "nameOutput", "payeeNameOutput"],
+    ["name"],
+    selectedSupplier.name
+  );
+  setElementText(
+    ["selectedSupplierTin", "tinOutput", "payeeTinOutput"],
+    ["tin"],
+    selectedSupplier.tin || "Pending"
+  );
+  setElementText(
+    ["selectedSupplierAddress", "addressOutput", "payeeAddressOutput"],
+    ["address"],
+    selectedSupplier.address || "Pending"
+  );
+}
+
+function updatePreview() {
+  updateSupplierPreview();
+
+  const year = yearInput ? yearInput.value : "2026";
+  const monthNumber = getMonthNumber(monthInput ? monthInput.value : "");
+  const amount = normalizeAmount(amountInput ? amountInput.value : "");
+  const quarter = monthNumber ? getQuarterInfo(monthNumber, year) : null;
+  const withholdingTax = amount * 0.02;
+
+  currentPreview = {
+    supplier: selectedSupplier,
+    year: Number(year) || 2026,
+    monthNumber,
+    amount,
+    withholdingTax,
+    quarter,
+    zip: zipInput ? zipInput.value.trim() : ""
+  };
+
+  if (!quarter) {
+    setElementText(
+      ["quarterPeriodOutput", "quarterOutput", "periodOutput"],
+      ["quarter", "period"],
+      "Pending"
+    );
+    setElementText(
+      ["monthBoxOutput", "monthOutput"],
+      ["month", "box"],
+      "Pending"
+    );
   } else {
-    el.taxPreview.textContent = "Pending";
+    setElementText(
+      ["quarterPeriodOutput", "quarterOutput", "periodOutput"],
+      ["quarter", "period"],
+      quarter.periodText
+    );
+    setElementText(
+      ["monthBoxOutput", "monthOutput"],
+      ["month", "box"],
+      quarter.monthBox
+    );
   }
+
+  setElementText(
+    ["taxOutput", "withholdingTaxOutput", "withholdingOutput"],
+    ["withholding", "tax"],
+    amount ? `PHP ${money(withholdingTax)}` : "Pending"
+  );
 }
 
-function clearText(page, topX, topY, width, height) {
-  const pageHeight = page.getHeight();
-  page.drawRectangle({
-    x: topX,
-    y: pageHeight - topY - height,
-    width,
-    height,
-    color: PDFLib.rgb(1, 1, 1),
-    borderColor: PDFLib.rgb(1, 1, 1),
-    borderWidth: 0,
-  });
+function requirePdfLib() {
+  if (!window.PDFLib) {
+    alert("PDF library is missing. Please make sure pdf-lib is loaded in index.html.");
+    return false;
+  }
+  return true;
 }
 
-function drawTextTop(page, text, topX, baselineTopY, size, font) {
-  const pageHeight = page.getHeight();
-  page.drawText(String(text || ""), {
-    x: topX,
-    y: pageHeight - baselineTopY,
+function drawText(page, text, x, y, size = 9, options = {}) {
+  if (!text) return;
+
+  page.drawText(String(text), {
+    x,
+    y,
     size,
-    font,
-    color: PDFLib.rgb(0, 0, 0),
+    color: options.color || window.PDFLib.rgb(0, 0, 0),
+    maxWidth: options.maxWidth,
+    lineHeight: options.lineHeight || size + 2
   });
 }
 
-function drawRightTextTop(page, text, rightX, baselineTopY, size, font) {
-  const value = String(text || "");
-  const width = font.widthOfTextAtSize(value, size);
-  drawTextTop(page, value, rightX - width, baselineTopY, size, font);
-}
-
-function fitSize(text, font, targetWidth, startingSize, minSize = 6.2) {
-  let size = startingSize;
-  while (size > minSize && font.widthOfTextAtSize(String(text || ""), size) > targetWidth) {
-    size -= 0.2;
-  }
-  return size;
-}
-
-function tinForDisplay(tin) {
-  const digits = String(tin || "").replace(/\D/g, "");
-  if (digits.length >= 12) {
-    return `${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6,9)} ${digits.slice(9)}`;
-  }
-  return tin || "";
-}
-
-function sanitizeFilename(value) {
-  return String(value || "2307")
-    .replace(/[^a-z0-9]+/gi, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 80);
-}
-
-function validateInputs() {
-  const supplier = state.selectedSupplier || findSupplier(el.supplierInput.value);
-  const month = parseMonth(el.monthInput.value);
-  const year = Number(el.yearInput.value);
-  const amount = parseAmount(el.amountInput.value);
-
-  if (!supplier) throw new Error("Supplier not found. Please type or select a supplier from the list.");
-  if (!month) throw new Error("Month not recognized. Use March, June, 3, 6, etc.");
-  if (!Number.isFinite(year) || year < 2000 || year > 2100) throw new Error("Year is not valid.");
-  if (amount === null || amount < 0) throw new Error("Amount is not valid.");
-
-  return { supplier, month, year, amount, quarter: quarterInfo(month, year) };
+function splitTin(tin) {
+  const cleanTin = String(tin || "").replace(/[^\d]/g, "");
+  return {
+    part1: cleanTin.slice(0, 3),
+    part2: cleanTin.slice(3, 6),
+    part3: cleanTin.slice(6, 9),
+    branch: cleanTin.slice(9, 14) || "00000"
+  };
 }
 
 async function generatePdf() {
-  const { supplier, amount, quarter } = validateInputs();
-  const pdfBytes = await fetch(TEMPLATE_PDF).then(r => r.arrayBuffer());
-  const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
-  const page = pdfDoc.getPages()[0];
-  const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-  const bold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-  const tax = amount * 0.02;
+  updatePreview();
 
-  clearText(page, 164, 116, 104, 19);
-  clearText(page, 421, 116, 104, 19);
-  drawTextTop(page, quarter.from, 169, 130, 9, font);
-  drawTextTop(page, quarter.to, 426, 130, 9, font);
+  if (!requirePdfLib()) return;
 
-  clearText(page, 210, 147, 238, 20);
-  drawTextTop(page, tinForDisplay(supplier.tin), 220, 162, 9, font);
+  if (!currentPreview.supplier) {
+    alert("Please select a valid supplier first.");
+    return;
+  }
 
-  clearText(page, 38, 180, 548, 22);
-  const nameSize = fitSize(supplier.name, bold, 520, 10.8, 7);
-  drawTextTop(page, supplier.name, 40, 196, nameSize, bold);
+  if (!currentPreview.quarter) {
+    alert("Please enter a valid month.");
+    return;
+  }
 
-  clearText(page, 38, 211, 498, 22);
-  clearText(page, 565, 209, 47, 18);
-  const addressSize = fitSize(supplier.address, font, 490, 8.8, 5.8);
-  drawTextTop(page, supplier.address, 40, 226, addressSize, font);
+  if (!currentPreview.amount) {
+    alert("Please enter a valid gross amount.");
+    return;
+  }
 
-  const zip = String(el.zipInput.value || "").trim();
-  if (zip) drawTextTop(page, zip.replace(/\D/g, "").slice(0, 6), 570, 224, 8.5, font);
+  const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
 
-  const monthColumns = {
-    1: { left: 222, right: 296 },
-    2: { left: 301, right: 377 },
-    3: { left: 381, right: 457 },
+  let templateBytes;
+
+  try {
+    const response = await fetch(TEMPLATE_PDF, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("PDF template not found.");
+    }
+    templateBytes = await response.arrayBuffer();
+  } catch (error) {
+    console.error(error);
+    alert("Cannot load 2307 template PDF. Check that 2307_template_blank.pdf is uploaded in the same folder as index.html.");
+    return;
+  }
+
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pages = pdfDoc.getPages();
+  const page = pages[0];
+
+  const supplier = currentPreview.supplier;
+  const quarter = currentPreview.quarter;
+  const amount = currentPreview.amount;
+  const tax = currentPreview.withholdingTax;
+  const tin = splitTin(supplier.tin);
+
+  page.setFont(font);
+
+  const black = rgb(0, 0, 0);
+
+  const textOptions = {
+    color: black
   };
-  const activeColumn = monthColumns[quarter.monthPosition];
 
-  [
-    [224, 400, 72, 14], [304, 400, 72, 14], [384, 400, 72, 14], [463, 400, 70, 14], [542, 400, 66, 14],
-    [224, 552, 72, 14], [304, 552, 72, 14], [384, 552, 72, 14], [463, 552, 70, 14], [542, 552, 66, 14],
-  ].forEach(r => clearText(page, r[0], r[1], r[2], r[3]));
+  drawText(page, quarter.fromDate.slice(0, 2), 164, 657, 8, textOptions);
+  drawText(page, quarter.fromDate.slice(3, 5), 195, 657, 8, textOptions);
+  drawText(page, quarter.fromDate.slice(6, 10), 226, 657, 8, textOptions);
 
-  drawRightTextTop(page, money(amount), activeColumn.right - 3, 412, 8, font);
-  drawRightTextTop(page, money(amount), 532, 412, 8, font);
-  drawRightTextTop(page, money(tax), 607, 412, 8, font);
+  drawText(page, quarter.toDate.slice(0, 2), 322, 657, 8, textOptions);
+  drawText(page, quarter.toDate.slice(3, 5), 353, 657, 8, textOptions);
+  drawText(page, quarter.toDate.slice(6, 10), 384, 657, 8, textOptions);
 
-  for (let pos = 1; pos <= 3; pos++) {
-    const col = monthColumns[pos];
-    const value = pos === quarter.monthPosition ? money(amount) : "-";
-    drawRightTextTop(page, value, col.right - 3, 564, 8, font);
-  }
-  drawRightTextTop(page, money(amount), 532, 564, 8, font);
-  drawRightTextTop(page, money(tax), 607, 564, 8, font);
+  drawText(page, tin.part1, 111, 614, 8, textOptions);
+  drawText(page, tin.part2, 159, 614, 8, textOptions);
+  drawText(page, tin.part3, 207, 614, 8, textOptions);
+  drawText(page, tin.branch, 255, 614, 8, textOptions);
 
-  const output = await pdfDoc.save();
-  const blob = new Blob([output], { type: "application/pdf" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `BIR_2307_${sanitizeFilename(supplier.name)}_${quarter.from.replaceAll(" ", "")}_${quarter.to.replaceAll(" ", "")}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function init() {
-  try {
-    const response = await fetch(SUPPLIERS_JSON);
-    state.suppliers = await response.json();
-    el.supplierList.innerHTML = state.suppliers
-      .map(s => `<option value="${String(s.name).replaceAll('"', '&quot;')}">${s.tin}</option>`)
-      .join("");
-    setStatus(`Loaded ${state.suppliers.length} visible supplier records. Hidden tabs are not included.`);
-  } catch (error) {
-    setStatus("Supplier database failed to load. Check the data folder path.");
-  }
-}
-
-[el.supplierInput, el.monthInput, el.yearInput, el.amountInput, el.zipInput].forEach(input => {
-  input.addEventListener("input", () => {
-    updateSupplierPreview();
-    updateComputedPreview();
+  drawText(page, supplier.name, 98, 588, 8, {
+    color: black,
+    maxWidth: 410,
+    lineHeight: 10
   });
-});
 
-el.downloadPdfBtn.addEventListener("click", async () => {
-  el.downloadPdfBtn.disabled = true;
-  setStatus("Generating PDF...");
-  try {
-    updateSupplierPreview();
-    await generatePdf();
-    setStatus("Done. Your filled BIR 2307 PDF has been downloaded.");
-  } catch (error) {
-    setStatus(error.message || "Something went wrong while generating the PDF.");
-  } finally {
-    el.downloadPdfBtn.disabled = false;
+  drawText(page, supplier.address, 98, 560, 7.5, {
+    color: black,
+    maxWidth: 410,
+    lineHeight: 9
+  });
+
+  if (currentPreview.zip) {
+    drawText(page, currentPreview.zip, 465, 540, 8, textOptions);
   }
-});
 
-el.resetBtn.addEventListener("click", () => {
-  el.supplierInput.value = "";
-  el.monthInput.value = "";
-  el.yearInput.value = "2026";
-  el.amountInput.value = "";
-  el.zipInput.value = "";
-  state.selectedSupplier = null;
-  updateSupplierPreview();
-  updateComputedPreview();
-  setStatus(`Loaded ${state.suppliers.length} visible supplier records. Hidden tabs are not included.`);
-});
+  drawText(page, "WC 158", 66, 338, 8, textOptions);
+  drawText(page, "Professional fees, talent fees, service fees, and similar payments", 110, 338, 7, {
+    color: black,
+    maxWidth: 250
+  });
 
-init();
+  const monthAmountY = 338;
+  const amountText = compactMoney(amount);
+  const taxText = compactMoney(tax);
+
+  if (quarter.monthPosition === 1) {
+    drawText(page, amountText, 353, monthAmountY, 8, textOptions);
+  }
+
+  if (quarter.monthPosition === 2) {
+    drawText(page, amountText, 414, monthAmountY, 8, textOptions);
+  }
+
+  if (quarter.monthPosition === 3) {
+    drawText(page, amountText, 475, monthAmountY, 8, textOptions);
+  }
+
+  drawText(page, amountText, 536, monthAmountY, 8, textOptions);
+  drawText(page, taxText, 536, 313, 8, textOptions);
+
+  page.setFont(boldFont);
+  drawText(page, taxText, 536, 286, 8, textOptions);
+
+  const pdfBytes = await pdfDoc.save();
+
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const link = document.createElement("a");
+  const cleanSupplierName = normalizeText(supplier.name).replace(/\s+/g, "_") || "supplier";
+  const cleanMonth = monthInput ? normalizeText(monthInput.value).replace(/\s+/g, "_") : "month";
+
+  link.href = URL.createObjectURL(blob);
+  link.download = `BIR_2307_${cleanSupplierName}_${cleanMonth}_${currentPreview.year}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function resetForm() {
+  if (supplierInput) supplierInput.value = "";
+  if (monthInput) monthInput.value = "";
+  if (amountInput) amountInput.value = "";
+  if (zipInput) zipInput.value = "";
+  if (yearInput && !yearInput.value) yearInput.value = "2026";
+
+  selectedSupplier = null;
+  currentPreview = null;
+  updatePreview();
+}
+
+function attachEvents() {
+  [
+    supplierInput,
+    monthInput,
+    yearInput,
+    amountInput,
+    zipInput
+  ].forEach((input) => {
+    if (input) {
+      input.addEventListener("input", updatePreview);
+      input.addEventListener("change", updatePreview);
+    }
+  });
+
+  if (downloadButton) {
+    downloadButton.addEventListener("click", generatePdf);
+  }
+
+  if (resetButton) {
+    resetButton.addEventListener("click", resetForm);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  if (yearInput && !yearInput.value) {
+    yearInput.value = "2026";
+  }
+
+  await loadSuppliers();
+  attachEvents();
+  updatePreview();
+
+  console.log("BIR 2307 app ready.");
+});
