@@ -1,4 +1,4 @@
-const TEMPLATE_PDF = "assets/2307_template_blank.pdf";
+const TEMPLATE_PDF = "./2307_template_blank.pdf";
 const SUPPLIERS_JSON = "./suppliers.json";
 
 const state = {
