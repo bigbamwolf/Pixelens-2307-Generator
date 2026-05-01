@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BIR 2307 Generator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">Pixelens 2307 Tool</p>
+      <h1>BIR 2307 Generator</h1>
+      <p class="lede">Type the supplier name, choose the month, enter the amount, then download a filled 2307 PDF.</p>
+    </section>
+
+    <section class="panel">
+      <div class="grid two">
+        <label>
+          Supplier name
+          <input id="supplierInput" list="supplierList" autocomplete="off" placeholder="Start typing supplier name">
+          <datalist id="supplierList"></datalist>
+        </label>
+        <label>
+          Year
+          <input id="yearInput" type="number" min="2000" max="2100" value="2026">
+        </label>
+      </div>
+
+      <div class="supplier-card" id="supplierCard">
+        <div>
+          <span>Name</span>
+          <strong id="previewName">No supplier selected</strong>
+        </div>
+        <div>
+          <span>TIN</span>
+          <strong id="previewTin">Pending</strong>
+        </div>
+        <div>
+          <span>Address</span>
+          <strong id="previewAddress">Pending</strong>
+        </div>
+      </div>
+
+      <div class="grid three">
+        <label>
+          Month
+          <input id="monthInput" placeholder="March, Jun, 6, etc.">
+        </label>
+        <label>
+          Gross amount
+          <input id="amountInput" inputmode="decimal" placeholder="Example: 150000">
+        </label>
+        <label>
+          ZIP code, optional
+          <input id="zipInput" inputmode="numeric" maxlength="10" placeholder="Leave blank if unknown">
+        </label>
+      </div>
+
+      <div class="result-card">
+        <div>
+          <span>Quarter period</span>
+          <strong id="quarterPreview">Pending</strong>
+        </div>
+        <div>
+          <span>Month box</span>
+          <strong id="monthBoxPreview">Pending</strong>
+        </div>
+        <div>
+          <span>2 percent withholding tax</span>
+          <strong id="taxPreview">Pending</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="downloadPdfBtn">Download filled PDF</button>
+        <button id="resetBtn" class="secondary">Reset</button>
+      </div>
+
+      <p class="note" id="statusText">Template and supplier database are loaded locally from this repository.</p>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
