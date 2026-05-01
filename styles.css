@@ -167,3 +167,66 @@ button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
     grid-template-columns: 1fr;
   }
 }
+:root {
+  --pixelens-green: #58c066;
+  --pixelens-bright-green: #66d773;
+  --pixelens-deep-green: #136b0e;
+  --pixelens-dark: #231f20;
+  --pixelens-light: #f9f9f9;
+}
+
+body {
+  border-top: 5px solid var(--pixelens-green);
+}
+
+.eyebrow,
+.kicker,
+label,
+.card-label,
+.result-label {
+  color: var(--pixelens-deep-green) !important;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--pixelens-green) !important;
+  box-shadow: 0 0 0 4px rgba(88, 192, 102, 0.18) !important;
+  outline: none !important;
+}
+
+button,
+.primary-button,
+.download-button,
+#downloadBtn {
+  background: linear-gradient(135deg, var(--pixelens-green), var(--pixelens-deep-green)) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+button:hover,
+.primary-button:hover,
+.download-button:hover,
+#downloadBtn:hover {
+  background: linear-gradient(135deg, var(--pixelens-bright-green), var(--pixelens-green)) !important;
+}
+
+.panel,
+.form-card,
+.app-card,
+.card {
+  border-top: 4px solid var(--pixelens-green) !important;
+}
+
+h1 {
+  color: var(--pixelens-dark);
+}
+
+h1::after {
+  content: "";
+  display: block;
+  width: 96px;
+  height: 6px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pixelens-green), var(--pixelens-bright-green));
+}
