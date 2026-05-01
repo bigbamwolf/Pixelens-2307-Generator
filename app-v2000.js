@@ -339,13 +339,13 @@ async function generatePdf() {
     drawDigits(page, onlyDigits(currentPreview.zip).padStart(4, '0').slice(-4), payeeZipCenters, 715.0, 9.0, { font: boldFont, color: black });
   }
 
-page.setFont(boldFont);
-drawDigits(page, payorTinDigits, payorTinCenters, 642.0, 9.8, { font: boldFont, color: black });
+    page.setFont(boldFont);
+    drawDigits(page, payorTinDigits, payorTinCenters, 642.0, 9.8, { font: boldFont, color: black });
 
-page.setFont(font);
-drawText(page, 'PIXELENS CREATIVE ADVERTISING INC.', 68, 610.0, 10, { color: black, maxWidth: 500 });
-drawText(page, 'G8-4 2ND FLOOR GEMS PLAZA CIRCUMFERENTIAL ROAD SAN JOSE, ANTIPOLO CITY', 68, 586.0, 8.2, { color: black, maxWidth: 492, lineHeight: 9 });
-drawDigits(page, '1870', payorZipCenters, 588.0, 9.0, { font: boldFont, color: black });
+    page.setFont(font);
+    drawText(page, 'PIXELENS CREATIVE ADVERTISING INC.', 68, 700, 10, { color: black, maxWidth: 500 });
+    drawText(page, 'G8-4 2ND FLOOR GEMS PLAZA CIRCUMFERENTIAL ROAD SAN JOSE, ANTIPOLO CITY', 68, 586.0, 8.2, { color: black, maxWidth: 492, lineHeight: 9 });
+    drawDigits(page, '1870', payorZipCenters, 588.0, 9.0, { font: boldFont, color: black });
 
   const incomeDescription = 'Professional fees, talent fees, service fees, and similar payments';
   const rowY = 559.5;
